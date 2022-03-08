@@ -1,7 +1,7 @@
 Package: MicroMoB
 Type: Package
 Title: Discrete Time Simulation of Mosquito-Borne Pathogen Transmission
-Version: 0.0.9
+Version: 0.0.11
 Authors@R: c(
       person("Sean L.", "Wu", email = "slwood89@gmail.com", role = c("aut","cre"), comment = c(ORCID = "0000-0002-5781-9493")),
       person("David L.", "Smith", email = "smitdave@uw.edu", role = "aut", comment = c(ORCID = "0000-0003-4367-3849")),
@@ -16,18 +16,18 @@ Description: Provides a framework based on S3 dispatch for constructing models
 License: MIT + file LICENSE
 Encoding: UTF-8
 RoxygenNote: 7.1.2
-Imports: extraDistr, abind
-Suggests: knitr, rmarkdown, testthat (>= 3.0.0), ggplot2, data.table
+Imports: extraDistr, abind, jsonlite, plumber, httpuv
+Suggests: knitr, rmarkdown, testthat (>= 3.0.0), ggplot2, data.table,
+        callr, httr, readr, withr
 VignetteBuilder: knitr
 URL: https://dd-harp.github.io/MicroMoB/,
         https://github.com/dd-harp/MicroMoB
 BugReports: https://github.com/dd-harp/MicroMoB/issues
 NeedsCompilation: yes
-Config/testthat/edition: 3
-Packaged: 2022-01-28 22:23:50 UTC; slwu89
+Packaged: 2022-03-09 00:28:57 UTC; slwu89
 Author: Sean L. Wu [aut, cre] (<https://orcid.org/0000-0002-5781-9493>),
   David L. Smith [aut] (<https://orcid.org/0000-0003-4367-3849>),
   Sophie Libkind [ctb]
 Maintainer: Sean L. Wu <slwood89@gmail.com>
 Repository: CRAN
-Date/Publication: 2022-02-01 09:00:04 UTC
+Date/Publication: 2022-03-09 00:50:02 UTC

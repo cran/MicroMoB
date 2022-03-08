@@ -29,7 +29,8 @@ draw_multinom <- function(n, prob) {
 sample_stochastic_vector <- function(x, prob) {
   stopifnot(length(x) == nrow(prob))
   if (ncol(prob) == 1L) {
-    return(x)
+    # if everything is going to one bin just return the total number of balls
+    return(sum(x))
   }
   samp <- vapply(X = 1:length(x), FUN = function(i) {
     draw_multinom(n = x[i], prob = prob[i, ])
@@ -173,6 +174,8 @@ time_patch_varying_parameter <- function(param, p, tmax) {
       ix <- (1:tmax) %% 365L
       ix[which(ix == 0L)] <- 365L
       out <- do.call(rbind, replicate(n = p, expr = param[ix], simplify = FALSE))
+    } else if (length(param) == 1L) {
+      out <- matrix(data = param, nrow = p, ncol = tmax)
     } else {
       stop("incorrect length of parameter")
     }

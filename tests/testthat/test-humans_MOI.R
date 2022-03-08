@@ -94,7 +94,7 @@ test_that("stochastic MOI model updates correctly, MOI matrix not completely fil
   MOI_sto <- mod$human$MOI
 
   diffs <- abs(MOI_det - MOI_sto) / MOI_det
-  expect_true(all(diffs < 0.10))
+  expect_true(all(diffs < 0.25))
 
   # pval <- ks.test(as.vector(MOI_det), as.vector(MOI_sto))$p.value
   # expect_true(pval > 0.8)
@@ -124,10 +124,96 @@ test_that("stochastic MOI model updates correctly, MOI matrix is filled", {
   MOI_sto <- mod$human$MOI
 
   diffs <- abs(MOI_det - MOI_sto) / MOI_det
-  expect_true(all(diffs < 0.10))
+  expect_true(all(diffs < 0.25))
 
   # pval <- ks.test(as.vector(MOI_det), as.vector(MOI_sto))$p.value
   # expect_true(pval > 0.8)
 })
 
 
+test_that("test JSON config working", {
+
+  library(jsonlite)
+
+  n <- 6 # number of human population strata
+  p <- 2 # number of patches
+
+  theta <- matrix(rexp(n*p), nrow = n, ncol = p)
+  theta <- theta / rowSums(theta)
+  H <- rep(10, n)
+  MOI <- matrix(0, nrow = 10, ncol = n)
+  MOI[1, ] <- H
+
+  # sending to JSON does not change R type when read back in
+  par <- list(
+    "stochastic" = FALSE,
+    "theta" = theta,
+    "wf" = rep(1, n),
+    "H" = H,
+    "MOI" = MOI,
+    "b" = 0.55,
+    "c" = 0.15,
+    "r" = 1/200,
+    "sigma" = 1
+  )
+
+  json_path <- tempfile(pattern = "human_par", fileext = ".json")
+  write_json(x = par, path = json_path, digits = NA)
+  par_in <- get_config_humans_MOI(path = json_path)
+  expect_true(all.equal(par, par_in))
+
+  # reject obviously bad input
+  par <- list(
+    "stochastic" = FALSE,
+    "theta" = theta[1],
+    "wf" = rep(1, n),
+    "H" = H,
+    "MOI" = MOI,
+    "b" = 0.55,
+    "c" = 0.15,
+    "r" = 1/200,
+    "sigma" = 1
+  )
+
+  json_path <- tempfile(pattern = "aqua_par", fileext = ".json")
+  write_json(x = par, path = json_path, digits = NA)
+  expect_error(get_config_humans_MOI(path = json_path))
+
+  unlink(x = json_path)
+
+})
+
+
+test_that("JSON parameters can read in", {
+  path <- system.file("extdata", "humans_MOI.json", package = "MicroMoB")
+  pars <- get_config_humans_MOI(path = path)
+
+  expect_true(length(pars) == 9L)
+
+  expect_true(is.logical(pars$stochastic))
+  stopifnot(length(pars$stochastic) == 1L)
+
+  expect_true(is.numeric(pars$theta))
+  expect_true(is.matrix(pars$theta))
+
+  expect_true(is.numeric(pars$wf))
+  expect_true(is.vector(pars$wf))
+
+  expect_true(is.numeric(pars$H))
+  expect_true(is.vector(pars$H))
+
+  expect_true(is.numeric(pars$MOI))
+  expect_true(is.matrix(pars$MOI))
+
+  expect_true(is.numeric(pars$b))
+  expect_true(is.vector(pars$b))
+
+  expect_true(is.numeric(pars$c))
+  expect_true(is.vector(pars$c))
+
+  expect_true(is.numeric(pars$r))
+  expect_true(is.vector(pars$r))
+
+  expect_true(is.numeric(pars$sigma))
+  expect_true(is.vector(pars$sigma))
+})

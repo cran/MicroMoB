@@ -8,8 +8,8 @@
 #' @param stochastic should the model update deterministically or stochastically?
 #' @param f the blood feeding rate
 #' @param q the human blood feeding fraction
-#' @param eip the Extrinsic Incubation Period, may be time varying, see [MicroMoB::time_varying_parameter]
-#' @param p daily survival probability, may be time varying, see [MicroMoB::time_varying_parameter]
+#' @param eip the Extrinsic Incubation Period (may be time varying see [MicroMoB::time_varying_parameter])
+#' @param p daily survival probability (may be time and patch varying see [MicroMoB::time_patch_varying_parameter])
 #' @param psi a mosquito dispersal matrix (rows must sum to 1)
 #' @param nu number of eggs laid per oviposition
 #' @param M total mosquito density per patch (vector of length `p`)
@@ -33,7 +33,7 @@ setup_mosquito_RM <- function(model, stochastic, f = 0.3, q = 0.9, eip, p, psi, 
 
   maxEIP <- max(eip_vec)
 
-  p_vec <- time_varying_parameter(param = p, tmax = tmax)
+  p_vec <- time_patch_varying_parameter(param = p, p = model$global$p, tmax = tmax)
 
   stopifnot(p_vec <= 1)
   stopifnot(p_vec >= 0)
@@ -105,6 +105,90 @@ setup_mosquito_RM <- function(model, stochastic, f = 0.3, q = 0.9, eip, p, psi, 
 }
 
 
+#' @title Get parameters for generalized Ross-Macdonald mosquito model
+#' @description The JSON config file should have 8 entries:
+#'  * stochastic: a boolean value
+#'  * f: scalar
+#'  * q: scalar
+#'  * eip: scalar or vector; see [MicroMoB::time_varying_parameter] for valid formats
+#'  * p: scalar or vector; see [MicroMoB::time_varying_parameter] for valid formats
+#'  * psi: matrix
+#'  * nu: scalar
+#'  * M: vector
+#'  * Y: vector
+#'  * Z: vector
+#'
+#' For interpretation of the entries, please read [MicroMoB::setup_mosquito_RM].
+#' @param path a file path to a JSON file
+#' @return a named [list]
+#' @importFrom jsonlite read_json
+#' @examples
+#' # to see an example of proper JSON input, run the following
+#' library(jsonlite)
+#' t <- 10 # days to simulate
+#' p <- 5 # number of patches
+#' EIP <-  rep(5, t)
+#' p_surv <- 0.95
+#' psi <- matrix(rexp(p^2), nrow = p, ncol = p)
+#' psi <- psi / rowSums(psi)
+#' par <- list(
+#'  "stochastic" = FALSE,
+#'  "f" = 0.3,
+#'  "q" = 0.9,
+#'  "eip" = EIP,
+#'  "p" = p_surv,
+#'  "psi" = psi,
+#'  "nu" = 20,
+#'  "M" = rep(100, p),
+#'  "Y" = rep(20, p),
+#'  "Z" = rep(5, p)
+#' )
+#' toJSON(par, pretty = TRUE)
+#' @export
+get_config_mosquito_RM <- function(path) {
+  pars <- read_json(path = file.path(path), simplifyVector = TRUE)
+
+  stopifnot(length(pars) == 10L)
+  stopifnot(is.logical(pars$stochastic))
+
+  stopifnot(is.numeric(pars$f))
+  stopifnot(is.numeric(pars$q))
+
+  stopifnot(is.numeric(pars$eip))
+  stopifnot(is.vector(pars$eip))
+
+  stopifnot(is.numeric(pars$p))
+  stopifnot(is.vector(pars$p))
+
+  stopifnot(is.numeric(pars$psi))
+  stopifnot(is.matrix(pars$psi))
+
+  stopifnot(is.numeric(pars$nu))
+
+  stopifnot(is.numeric(pars$M))
+  stopifnot(is.numeric(pars$Y))
+  stopifnot(is.numeric(pars$Z))
+  stopifnot(is.vector(pars$M))
+  stopifnot(is.vector(pars$Y))
+  stopifnot(is.vector(pars$Z))
+
+  return(pars)
+}
+
+
+# output
+
+#' @title Get output for Ross-Macdonald mosquito populations
+#' @description Return a [data.frame].
+#' @inheritParams output_mosquitoes
+#' @return a [data.frame] with columns `M` (all adult mosquitoes), `Y` (infected mosquitoes), and `Z` (infectious mosquitoes), and rows
+#' correspond to places.
+#' @export
+output_mosquitoes.RM <- function(model) {
+  data.frame(M = model$mosquito$M, Y = model$mosquito$Y, Z = model$mosquito$Z)
+}
+
+
 # update mosquitoes over one time step
 
 #' @title Update Ross-Macdonald mosquitoes
@@ -127,8 +211,7 @@ step_mosquitoes.RM_deterministic <- function(model) {
   # parameters
   tnow <- model$global$tnow
   EIP <- model$mosquito$eip[tnow]
-  maxEIP <- model$mosquito$maxEIP
-  p <- model$mosquito$p[tnow]
+  p <- model$mosquito$p[, tnow]
   psi <- model$mosquito$psi
 
   # newly infected mosquitoes
@@ -174,7 +257,7 @@ step_mosquitoes.RM_stochastic <- function(model) {
   tnow <- model$global$tnow
   EIP <- model$mosquito$eip[tnow]
   maxEIP <- model$mosquito$maxEIP
-  p <- model$mosquito$p[tnow]
+  p <- model$mosquito$p[, tnow]
   psi <- model$mosquito$psi
   n_patch <- model$global$p
 

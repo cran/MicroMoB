@@ -1,3 +1,23 @@
+# MicroMoB 0.0.11
+
+  * add behavioral state model of adult mosquito dynamics.
+
+# MicroMoB 0.0.10
+
+  * add functions to each model allowing parameters to be read in from specially
+  formatted JSON files
+  * add `inst/extdata` folder with JSON files for testing config
+  * add `jsonlite` package to `Imports` for JSON config capability
+  * add `plumber` package to `Imports` to expose a web API
+  * add `inst/plumber/` subfolders to store Plumber APIs
+  * add `callr` package to `Suggests` for testing API
+  * add `httr` package to `Suggests` for testing API
+  * add `callr` package to `Suggests` for using CSV serialization to return simulation output from API
+  * `p` parameter for RM adult mosquito model is now allowed to be patch and time varying
+  * add new vignette "Advanced topics" describing how to extend the package and
+  the Plumber web API.
+  * add `withr` package to `Suggests` to clean up after testing API.
+
 # MicroMoB 0.0.9
 
   * add information on return value to all function documentation

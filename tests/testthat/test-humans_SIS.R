@@ -197,3 +197,85 @@ test_that("stochastic updates of human SIS model work with pulsed h", {
   }
 
 })
+
+
+test_that("test JSON config working", {
+
+  library(jsonlite)
+
+  n <- 6 # number of human population strata
+  p <- 2 # number of patches
+
+  theta <- matrix(rexp(n*p), nrow = n, ncol = p)
+  theta <- theta / rowSums(theta)
+  H <- rep(10, n)
+  X <- rep(3, n)
+
+  # sending to JSON does not change R type when read back in
+  par <- list(
+    "stochastic" = FALSE,
+    "theta" = theta,
+    "wf" = rep(1, n),
+    "H" = H,
+    "X" = X,
+    "b" = 0.55,
+    "c" = 0.15,
+    "r" = 1/200
+  )
+
+  json_path <- tempfile(pattern = "human_par", fileext = ".json")
+  write_json(x = par, path = json_path, digits = NA)
+  par_in <- get_config_humans_SIS(path = json_path)
+  expect_true(all.equal(par, par_in))
+
+  # reject obviously bad input
+  par <- list(
+    "stochastic" = "FALSE",
+    "theta" = theta,
+    "wf" = rep(1, n),
+    "H" = H,
+    "X" = X,
+    "b" = 0.55,
+    "c" = 0.15,
+    "r" = 1/200
+  )
+
+  json_path <- tempfile(pattern = "aqua_par", fileext = ".json")
+  write_json(x = par, path = json_path, digits = NA)
+  expect_error(get_config_humans_SIS(path = json_path))
+
+  unlink(x = json_path)
+
+})
+
+
+test_that("JSON parameters can read in", {
+  path <- system.file("extdata", "humans_SIS.json", package = "MicroMoB")
+  pars <- get_config_humans_SIS(path = path)
+
+  expect_true(length(pars) == 8L)
+
+  expect_true(is.logical(pars$stochastic))
+  expect_true(length(pars$stochastic) == 1L)
+
+  expect_true(is.numeric(pars$theta))
+  expect_true(is.matrix(pars$theta))
+
+  expect_true(is.numeric(pars$wf))
+  expect_true(is.vector(pars$wf))
+
+  expect_true(is.numeric(pars$H))
+  expect_true(is.vector(pars$H))
+
+  expect_true(is.numeric(pars$X))
+  expect_true(is.vector(pars$X))
+
+  expect_true(is.numeric(pars$b))
+  expect_true(is.vector(pars$b))
+
+  expect_true(is.numeric(pars$c))
+  expect_true(is.vector(pars$c))
+
+  expect_true(is.numeric(pars$r))
+  expect_true(is.vector(pars$r))
+})

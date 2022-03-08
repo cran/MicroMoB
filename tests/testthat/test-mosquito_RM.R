@@ -25,30 +25,30 @@ test_that("RM model setup is working", {
   # eip tests
   setup_mosquito_RM(mod, stochastic = FALSE, f = f, q = q, eip = 5, p = 0.9, psi = psi, M = M, Y = Y, Z = Z)
   expect_equal(mod$mosquito$eip, rep(5, tmax))
-  expect_equal(mod$mosquito$p, rep(0.9, tmax))
+  expect_equal(mod$mosquito$p, matrix(0.9, 3, tmax))
 
   mod <- make_MicroMoB(tmax = tmax, p = 3)
   eip <- 1:365
   setup_mosquito_RM(mod, stochastic = FALSE, f = f, q = q, eip = eip, p = 0.9, psi = psi, M = M, Y = Y, Z = Z)
   expect_equal(mod$mosquito$eip, 1:tmax)
-  expect_equal(mod$mosquito$p, rep(0.9, tmax))
+  expect_equal(mod$mosquito$p, matrix(0.9, 3, tmax))
 
   mod <- make_MicroMoB(tmax = tmax, p = 3)
   eip <- 1:tmax
   setup_mosquito_RM(mod, stochastic = FALSE, f = f, q = q, eip = eip, p = 0.9, psi = psi, M = M, Y = Y, Z = Z)
   expect_equal(mod$mosquito$eip, 1:tmax)
-  expect_equal(mod$mosquito$p, rep(0.9, tmax))
+  expect_equal(mod$mosquito$p, matrix(0.9, 3, tmax))
 
   # p tests
   mod <- make_MicroMoB(tmax = tmax, p = 3)
   p <- seq(from = 0.01, to = 0.99, length.out = 365)
   setup_mosquito_RM(mod, stochastic = FALSE, f = f, q = q, eip = 5, p = p, psi = psi, M = M, Y = Y, Z = Z)
-  expect_equal(mod$mosquito$p, p[1:tmax])
+  expect_equal(mod$mosquito$p, t(replicate(3, p[1:tmax])))
 
   mod <- make_MicroMoB(tmax = tmax, p = 3)
   p <- seq(from = 0.01, to = 0.99, length.out = tmax)
   setup_mosquito_RM(mod, stochastic = FALSE, f = f, q = q, eip = 5, p = p, psi = psi, M = M, Y = Y, Z = Z)
-  expect_equal(mod$mosquito$p, p)
+  expect_equal(mod$mosquito$p, t(replicate(3, p[1:tmax])))
 
   # oviposit tests
   expected_nu_det <- mod$mosquito$nu * f * M
@@ -128,6 +128,11 @@ test_that("deterministic RM step is working with pulse of infection, no dispersa
 
   # by hand
   expect_equal((M * a) * (0.9^4), mod$mosquito$Z)
+
+  out <- output_mosquitoes(mod)
+  expect_equal(out$M, mod$mosquito$M)
+  expect_equal(out$Y, mod$mosquito$Y)
+  expect_equal(out$Z, mod$mosquito$Z)
 
 })
 
@@ -315,6 +320,11 @@ test_that("stochastic RM step is working with pulse of infection, no dispersal",
   expected <-  (M * a) * (0.9^4)
   expect_true(all(abs(mod$mosquito$Z - expected) / expected < 0.025))
 
+  out <- output_mosquitoes(mod)
+  expect_equal(out$M, mod$mosquito$M)
+  expect_equal(out$Y, mod$mosquito$Y)
+  expect_equal(out$Z, mod$mosquito$Z)
+
 })
 
 
@@ -444,3 +454,88 @@ test_that("stochastic RM step is working with pulse of infection, with dispersal
 
 })
 
+
+test_that("test JSON config working", {
+
+  library(jsonlite)
+
+  t <- 10 # days to simulate
+  p <- 2 # number of patches
+
+  EIP <-  rep(5, t)
+  p_surv <- 0.95
+  psi <- matrix(rexp(p^2), nrow = p, ncol = p)
+  psi <- psi / rowSums(psi)
+
+  # sending to JSON does not change R type when read back in
+  par <- list(
+    "stochastic" = FALSE,
+    "f" = 0.3,
+    "q" = 0.9,
+    "eip" = EIP,
+    "p" = p_surv,
+    "psi" = psi,
+    "nu" = 20,
+    "M" = rep(100, p),
+    "Y" = rep(20, p),
+    "Z" = rep(5, p)
+  )
+
+  json_path <- tempfile(pattern = "mosquito_par", fileext = ".json")
+  write_json(x = par, path = json_path, digits = NA)
+  par_in <- get_config_mosquito_RM(path = json_path)
+  expect_true(all.equal(par, par_in))
+
+  # reject obviously bad input
+  par <- list(
+    "stochastic" = FALSE,
+    "f" = 0.3,
+    "q" = 0.9,
+    "eip" = EIP,
+    "p" = p_surv,
+    "psi" = NULL,
+    "nu" = 20,
+    "M" = rep(100, p),
+    "Y" = rep(20, p),
+    "Z" = rep(5, p)
+  )
+
+  json_path <- tempfile(pattern = "mosquito_par", fileext = ".json")
+  write_json(x = par, path = json_path, digits = NA)
+  expect_error(get_config_mosquito_RM(path = json_path))
+
+  unlink(x = json_path)
+
+})
+
+
+test_that("JSON parameters can read in", {
+  path <- system.file("extdata", "mosquito_RM.json", package = "MicroMoB")
+  pars <- get_config_mosquito_RM(path = path)
+
+  expect_true(length(pars) == 10L)
+  expect_true(is.logical(pars$stochastic))
+  expect_true(length(pars$stochastic) == 1L)
+
+  expect_true(is.numeric(pars$f))
+  expect_true(is.numeric(pars$q))
+
+  expect_true(is.numeric(pars$eip))
+  expect_true(is.vector(pars$eip))
+
+  expect_true(is.numeric(pars$p))
+  expect_true(is.vector(pars$p))
+
+  expect_true(is.numeric(pars$psi))
+  expect_true(is.matrix(pars$psi))
+
+  expect_true(is.numeric(pars$nu))
+
+  expect_true(is.numeric(pars$M))
+  expect_true(is.numeric(pars$Y))
+  expect_true(is.numeric(pars$Z))
+  expect_true(is.vector(pars$M))
+  expect_true(is.vector(pars$Y))
+  expect_true(is.vector(pars$Z))
+
+})

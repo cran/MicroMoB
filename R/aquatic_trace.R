@@ -12,12 +12,12 @@ setup_aqua_trace <- function(model, lambda, stochastic) {
   stopifnot(inherits(model, "MicroMoB"))
 
   tmax <- model$global$tmax
-  p <- model$global$p
+  l <- model$global$l
 
   stopifnot(is.finite(lambda))
   stopifnot(lambda >= 0)
 
-  lambda_mat <- time_patch_varying_parameter(param = lambda, p = p, tmax = tmax)
+  lambda_mat <- time_patch_varying_parameter(param = lambda, p = l, tmax = tmax)
 
   aqua_class <- c("trace")
   if (stochastic) {
@@ -32,10 +32,53 @@ setup_aqua_trace <- function(model, lambda, stochastic) {
 }
 
 
+#' @title Get parameters for aquatic (immature) model with forced emergence
+#' @description The JSON config file should have two entries:
+#'  * stochastic: a boolean value
+#'  * lambda: a scalar, vector, or matrix (row major). It will be passed to
+#'  [MicroMoB::time_patch_varying_parameter], see that function's documentation for
+#'  appropriate dimensions.
+#'
+#' For interpretation of the entries, please read [MicroMoB::setup_aqua_trace].
+#' @param path a file path to a JSON file
+#' @return a named [list]
+#' @importFrom jsonlite read_json
+#' @examples
+#' # to see an example of proper JSON input, run the following
+#' library(jsonlite)
+#' t <- 10 # number of days to simulate
+#' par <- list(
+#'  "stochastic" = FALSE,
+#'  "lambda" = rpois(n = t, lambda = 10)
+#' )
+#' toJSON(par, pretty = TRUE)
+#' @export
+get_config_aqua_trace <- function(path) {
+  pars <- read_json(path = file.path(path), simplifyVector = TRUE)
+  stopifnot(length(pars) == 2L)
+  stopifnot(is.logical(pars$stochastic))
+  stopifnot(length(pars$stochastic) == 1L)
+  stopifnot(is.numeric(pars$lambda))
+  stopifnot(is.vector(pars$lambda) | is.matrix(pars$lambda))
+  return(pars)
+}
+
+
+# output
+
+#' @title Get output for aquatic (immature) mosquito populations with forced emergence
+#' @description This function returns an empty [data.frame] as trace models do
+#' not have endogenous dynamics.
+#' @inheritParams output_aqua
+#' @return a [data.frame]
+#' @export
+output_aqua.trace <- function(model) {data.frame()}
+
+
 # step function
 
 #' @title Update aquatic (immature) mosquito populations for forced emergence
-#' @description This function does nothing as trace models are do not have
+#' @description This function does nothing as trace models do not have
 #' endogenous dynamics.
 #' @inheritParams step_aqua
 #' @return no return value
@@ -59,7 +102,7 @@ compute_emergents.trace <- function(model) {
 #' @title Compute number of newly emerging adults from forcing term (deterministic)
 #' @description Return the column of the lambda matrix for this day.
 #' @inheritParams compute_emergents
-#' @return a vector of length `p` giving the number of newly emerging adult in each patch
+#' @return a vector of length `l` giving the number of newly emerging adult in each patch
 #' @export
 compute_emergents.trace_deterministic <- function(model) {
   return(model$aqua$lambda[, model$global$tnow])
@@ -69,9 +112,9 @@ compute_emergents.trace_deterministic <- function(model) {
 #' @description Draw a Poisson distributed number of emerging adults with mean parameter
 #' from the column of the trace matrix for this day.
 #' @inheritParams compute_emergents
-#' @return a vector of length `p` giving the number of newly emerging adult in each patch
+#' @return a vector of length `l` giving the number of newly emerging adult in each patch
 #' @importFrom stats rpois
 #' @export
 compute_emergents.trace_stochastic <- function(model) {
-  return(rpois(n = model$global$p, lambda = model$aqua$lambda[, model$global$tnow]))
+  return(rpois(n = model$global$l, lambda = model$aqua$lambda[, model$global$tnow]))
 }

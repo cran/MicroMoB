@@ -2,6 +2,7 @@
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/dd-harp/MicroMoB/workflows/R-CMD-check/badge.svg)](https://github.com/dd-harp/MicroMoB/actions)
+[![CRAN](https://www.r-pkg.org/badges/version/MicroMoB)](https://cran.r-project.org/package=MicroMoB)
 [![codecov](https://codecov.io/gh/dd-harp/MicroMoB/branch/main/graph/badge.svg?token=VAZXH6PVNG)](https://app.codecov.io/gh/dd-harp/MicroMoB)
 <!-- badges: end -->
 
@@ -21,7 +22,12 @@ We hope it proves useful. Please visit the [website](https://dd-harp.github.io/M
 
 ```
 remotes::install_github('dd-harp/MicroMoB')
-library(MicroMoB)
+```
+
+Alternatively you can install **Micro-MoB** directly from CRAN, but be aware that the CRAN version may not be the most recent version of the package:
+
+```
+install.packages('MicroMoB')
 ```
 
 ## Documentation
@@ -42,9 +48,16 @@ of MBPT models that are implemented in **Micro-MoB**:
   model for superinfection in humans.
   * `vignette("BH_aqua")`: read about a simple non-linear model of aquatic (immature)
   stage mosquito dynamics based on the well known [Beverton-Holt model](https://en.wikipedia.org/wiki/Beverton-Holt_model) from ecology.
+  * `vignette("BQ_mosquito")`: read about a behavioral state model of adult mosquito
+  dynamics.
   * `vignette("RM_transmission")`: read about how we put together models fulfilling
   each component to run a simple Ross-Macdonald style model of pathogen transmission
   between human hosts and mosquito vectors.
+  
+The article `vignette("Advanced")` contains information on how to extend **Micro-MoB**
+by linking to it from a new package, and how to write new models that interact with
+the rest of the system. It also contains information on how to use the
+[Plumber web API](https://www.rplumber.io/) which is supported for some models in **Micro-MoB**.
 
 ## Contributing
 
