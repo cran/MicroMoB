@@ -24,37 +24,29 @@ MOI_init <- matrix(data = c(1e5, rep(0, 1e2)), nrow = 101, ncol = n)
 mod <- make_MicroMoB(tmax = tmax, p = 1)
 setup_humans_MOI(model = mod, stochastic = TRUE, theta = matrix(1, nrow = n, ncol = 1), H = colSums(MOI_init), MOI = MOI_init, r = r, b = b)
 
-MOI_out <- matrix(data = NaN, nrow = nrow(MOI_init), ncol = tmax + 1)
-MOI_out[, 1L] <- MOI_init
+human_out <- data.table::CJ(day = 1:tmax, MOI = 0:(nrow(MOI_init)-1), value = NaN)
+data.table::setkey(human_out, day)
 
-while (mod$global$tnow <= mod$global$tmax) {
+while (get_tnow(mod) <= mod$global$tmax) {
   mod$human$EIR <- EIR
   step_humans(model = mod)
-  MOI_out[, mod$global$tnow + 1L] <- mod$human$MOI
+  human_out[day==get_tnow(mod), value := as.vector(mod$human$MOI)]
   mod$global$tnow <- mod$global$tnow + 1L
 }
 
 ## -----------------------------------------------------------------------------
-weighted.mean(x = 0:100, w = MOI_out[, tmax])
+weighted.mean(x = 0:100, w = human_out[day == tmax, value])
 
 ## -----------------------------------------------------------------------------
-# plot output
-MOI_out_dt <- as.data.table(t(MOI_out))
-MOI_out_dt <- suppressWarnings(melt(MOI_out_dt))
-setnames(MOI_out_dt, new = c("MOI", "Count"))
-levels(MOI_out_dt$MOI) <- 0:100
-MOI_out_dt[, "Day" := 0:tmax, by = MOI]
-
-ggplot(data = MOI_out_dt) +
-  geom_line(aes(x = Day, y = Count, group = MOI, color = as.numeric(MOI)))
+ggplot(data = human_out) +
+  geom_line(aes(x = day, y = value, group = MOI, color = MOI))
 
 ## -----------------------------------------------------------------------------
-MOI_final <- MOI_out_dt[Day == tmax, ]
-MOI_final[, "prop" := Count / sum(Count)]
-MOI_final[, "MOI" := 0:100]
-MOI_final[, "theoretical" := dpois(x = MOI, lambda = h/r)]
+human_final <- human_out[day == tmax, ]
+human_final[, 'theoretical' := dpois(x = MOI, lambda = h/r)]
+human_final[, 'empirical' := value / sum(value)]
 
-ggplot(MOI_final, aes(MOI, prop)) +
+ggplot(human_final, aes(MOI, empirical)) +
     geom_bar(stat = 'identity') +
     geom_line(aes(x = MOI, y = theoretical), color = "blue")
 
